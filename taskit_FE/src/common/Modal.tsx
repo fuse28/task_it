@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 
 export default function Modal({
   visible,
@@ -31,37 +32,92 @@ export default function Modal({
     label: user.name || user.email,
   }));
 
+  type FormValues = {
+    projectName: string;
+    projectDescription: string;
+    projectTeam: string[];
+  };
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+    clearErrors,
+    reset,
+    control,
+  } = useForm<FormValues>({
+    defaultValues: {
+      projectName: "",
+      projectDescription: "",
+      projectTeam: [],
+    },
+    mode: "onSubmit",
+  });
+
+  const onSave = (values: FormValues) => {
+    console.log("submit", values);
+  };
+
   return (
     <div className="card flex  justify-content-center">
       <Dialog open={visible} onOpenChange={setVisible}>
         <DialogContent className="sm:max-w-[425px]">
-          <form>
+          <form onSubmit={handleSubmit(onSave)}>
             <DialogHeader>
               <DialogTitle>Name Project</DialogTitle>
-              <DialogDescription>
-                Name your project here, so that you can easily identify it.
-              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="name-1">Name</Label>
-                <Input id="name-1" name="name" defaultValue="Project Name" />
+              <div className="grid gap-3 mt-5">
+                <Label htmlFor="projectName">Name</Label>
+                <Input
+                  id="projectName"
+                  placeholder="Project Name"
+                  {...register("projectName", {
+                    required: "Project Name is required",
+                  })}
+                />
+                {errors.projectName && (
+                  <p className="text-sm text-red-600">
+                    {errors.projectName.message}
+                  </p>
+                )}
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="username-1">Description</Label>
-                <Input id="username-1" name="username" defaultValue="" />
+                <Label htmlFor="projectDescription">Description</Label>
+                <Input
+                  id="projectDescription"
+                  placeholder="project description"
+                  {...register("projectDescription")}
+                />
               </div>
               <div className="grid gap-3">
                 <Label htmlFor="username-1">Team</Label>
-                <MultiSelect
-                  options={teamOptions}
-                  value={selectedTeam}
-                  onValueChange={setSelectedTeam}
-                  placeholder="Choose team"
+                <Controller
+                  control={control}
+                  name="projectTeam"
+                  rules={{
+                    validate: (v) =>
+                      (Array.isArray(v) && v.length > 0) ||
+                      "Select at least one team member",
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <MultiSelect
+                      options={teamOptions}
+                      value={value ?? []}
+                      onValueChange={onChange}
+                      placeholder="Choose team"
+                    />
+                  )}
                 />
+                {errors.projectTeam && (
+                  <p className="text-sm text-red-600">
+                    {errors.projectTeam.message}
+                  </p>
+                )}
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-5">
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>

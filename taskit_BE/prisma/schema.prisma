@@ -9,14 +9,25 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  publicId    String   @unique
+  id          Int       @id @default(autoincrement())
+  publicId    String    @unique
   name        String?
-  email       String   @unique
+  email       String    @unique
   password    String?
   accountType String
-  provider    String?  @default("local")
+  provider    String?   @default("local")
   providerId  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
+  sessions    Session[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+}
+
+model Session {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshHash String
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

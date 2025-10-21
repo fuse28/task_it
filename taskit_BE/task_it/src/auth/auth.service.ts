@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -23,7 +27,7 @@ export class AuthService {
     // Check if user already exists
     const provider = 'local';
     const existingUser = await this.prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
@@ -31,13 +35,13 @@ export class AuthService {
     }
 
     // Hash password
-    let hashedPassword: string = "";
-    if(provider === "local"){
-       hashedPassword = await bcrypt.hash(password, 12);
+    let hashedPassword: string = '';
+    if (provider === 'local') {
+      hashedPassword = await bcrypt.hash(password, 12);
     }
     const providerId = `local-${uuidv4()}`;
 
-    const publicId = this.makePublicId("LOC");
+    const publicId = this.makePublicId('LOC');
     // Create user
     const user = await this.prisma.user.create({
       data: {
@@ -47,55 +51,54 @@ export class AuthService {
         name,
         accountType,
         provider,
-        providerId
+        providerId,
       },
       select: {
         id: true,
         email: true,
         name: true,
         accountType: true,
-        provider:true,
-        providerId:true
+        provider: true,
+        providerId: true,
       },
     });
 
-
-    // Generate JWT token
-    const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload);
+    // issue token and generate session
+    const { accessToken, refreshToken } = await this.generateToken(
+      user.id,
+      user.email,
+    );
+    await this.saveRefreshSession(Number(user.id), refreshToken);
 
     return {
       user,
-      token,
+      token: accessToken,
+      refreshToken,
     };
   }
 
-
-  async googleLogin(idToken: string){
+  async googleLogin(idToken: string) {
     const { OAuth2Client } = await import('google-auth-library');
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    if(!clientId){
+    if (!clientId) {
       throw new UnauthorizedException('Google client not configured');
     }
     const client = new OAuth2Client(clientId);
     const ticket = await client.verifyIdToken({ idToken, audience: clientId });
     const payload = ticket.getPayload();
-    if(!payload){
+    if (!payload) {
       throw new UnauthorizedException('Invalid Google token');
     }
-    const email = payload.email ;
+    const email = payload.email;
     if (!email) {
       throw new UnauthorizedException('Google account has no email');
     }
     const name = (payload.name || payload.given_name || '').toString();
-    const googleId = payload.sub ;
+    const googleId = payload.sub;
 
     let user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { provider: 'google', providerId: googleId },
-          { email }, 
-        ],
+        OR: [{ provider: 'google', providerId: googleId }, { email }],
       },
     });
     if (!user) {
@@ -108,7 +111,7 @@ export class AuthService {
           accountType: 'personal',
           provider: 'google',
           providerId: googleId,
-          password: '', 
+          password: '',
         },
       });
     } else {
@@ -121,8 +124,13 @@ export class AuthService {
       }
     }
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
-    return { user, token };
+    const { accessToken, refreshToken } = await this.generateToken(
+      user.id,
+      user.email,
+    );
+    await this.saveRefreshSession(Number(user.id), refreshToken);
+
+    return { user, accessToken, refreshToken };
   }
 
   async login(email: string, password: string) {
@@ -142,8 +150,11 @@ export class AuthService {
     }
 
     // Generate JWT token
-    const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload);
+    const { accessToken, refreshToken } = await this.generateToken(
+      user.id,
+      user.email,
+    );
+    await this.saveRefreshSession(Number(user.id), refreshToken);
 
     return {
       user: {
@@ -152,7 +163,8 @@ export class AuthService {
         name: user.name,
         type: user.accountType,
       },
-      token,
+      accessToken,
+      refreshToken,
     };
   }
 
@@ -163,10 +175,124 @@ export class AuthService {
 
     if (!user || !user.password) return null;
 
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       const { password, ...result } = user;
       return result;
     }
     return null;
+  }
+
+  async generateToken(userId: string | number, email: string) {
+    const sub = typeof userId === 'number' ? String(userId) : userId;
+
+    const accessToken = this.jwtService.sign(
+      { sub, email },
+      { expiresIn: '10m' },
+    );
+    const refreshToken = this.jwtService.sign(
+      { sub, email, type: 'refresh' },
+      { expiresIn: '30d' },
+    );
+    return { accessToken, refreshToken };
+  }
+
+  async saveRefreshSession(userId: number, refreshToken: string) {
+    const refreshHash = await bcrypt.hash(refreshToken, 12);
+    const session = await this.prisma.session.create({
+      data: {
+        userId,
+        refreshHash,
+      },
+    });
+    return session;
+  }
+
+  async refresh(providedRefreshToken: string) {
+    let payload: any;
+
+    try {
+      payload = this.jwtService.verify(providedRefreshToken);
+
+      if (payload?.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid Token Type');
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Refresh Token');
+    }
+
+    const userId = Number(payload.sub);
+    const email = payload.email as string;
+
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null },
+      select: { id: true, refreshHash: true },
+    });
+
+    let matchedSession: { id: number; refreshHash: string } | null = null;
+
+    for (const s of sessions) {
+      const ok = await bcrypt.compare(providedRefreshToken, s.refreshHash);
+      if (ok) {
+        matchedSession = s;
+        break;
+      }
+    }
+    if (!matchedSession) {
+      throw new UnauthorizedException('Refresh Token not recognized');
+    }
+
+    const { accessToken, refreshToken: newRt } = await this.generateToken(
+      userId,
+      email,
+    );
+
+    const newHash = await bcrypt.hash(newRt, 12);
+
+    await this.prisma.session.update({
+      where: { id: matchedSession.id },
+      data: { refreshHash: newHash },
+    });
+    return { accessToken, refreshToken: newRt };
+  }
+
+  // Logout
+
+  async logout(providedRefreshToken: string) {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(providedRefreshToken);
+      if (payload?.type !== 'refresh') {
+        return { success: true };
+      }
+    } catch {
+      return { success: true };
+    }
+
+    const userId = Number(payload.sub);
+
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null },
+      select: { id: true, refreshHash: true },
+    });
+
+    let matchedSession: { id: number; refreshHash: string } | null = null;
+    for (const s of sessions) {
+      const ok = await bcrypt.compare(providedRefreshToken, s.refreshHash);
+      if (ok) {
+        matchedSession = s;
+        break;
+      }
+    }
+
+    if (!matchedSession) {
+      return { success: true };
+    }
+
+    await this.prisma.session.update({
+      where: { id: matchedSession.id },
+      data: { revokedAt: new Date() },
+    });
+
+    return { success: true };
   }
 }
