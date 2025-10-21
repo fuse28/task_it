@@ -1,0 +1,40 @@
+{
+  "name": "taskit-backend",
+  "version": "1.0.0",
+  "description": "TaskIt Backend API",
+  "main": "task_it/dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node task_it/dist/main.js",
+    "start:dev": "ts-node-dev --respawn --transpile-only task_it/src/main.ts",
+    "start:prod": "node task_it/dist/main.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.5",
+    "@prisma/client": "^6.16.2",
+    "@react-oauth/google": "^0.12.2",
+    "bcryptjs": "^3.0.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.16.3",
+    "prisma": "^6.16.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.5.2",
+    "@types/passport-jwt": "^4.0.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.2"
+  }
+}
