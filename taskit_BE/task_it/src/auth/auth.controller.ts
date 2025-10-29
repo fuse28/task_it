@@ -1,7 +1,15 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '../dto/user.dto';
+import { CreateUserDto } from '../users/user.dto';
 
 export class LoginDto {
   @IsEmail()
@@ -27,16 +35,49 @@ export class AuthController {
     return this.authService.register(createUserDto);
   }
 
-
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto.email, loginDto.password);
+    const { user, accessToken, refreshToken } = await this.authService.login(
+      loginDto.email,
+      loginDto.password,
+    );
+    return {
+      message: 'Login successful',
+      user,
+      accessToken,
+      refreshToken,
+    };
   }
 
   @Post('googleSignin')
   @HttpCode(HttpStatus.OK)
   async googleLogin(@Body() googleLoginDto: GoogleLoginDto) {
-    return this.authService.googleLogin(googleLoginDto.idToken);
+    const { user, accessToken, refreshToken } =
+      await this.authService.googleLogin(googleLoginDto.idToken);
+
+    return {
+      message: 'Google login successful',
+      user,
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  @Post('refresh')
+  async refresh(@Body() body: { refreshToken: string }) {
+    const { refreshToken } = body;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+    return this.authService.refresh(refreshToken);
+  }
+  @Post('logout')
+  async logout(@Body() body: { refreshToken: string }) {
+    const { refreshToken } = body;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+    return this.authService.logout(refreshToken);
   }
 }

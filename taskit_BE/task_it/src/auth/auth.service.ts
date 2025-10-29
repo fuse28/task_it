@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
-import { CreateUserDto } from '../dto/user.dto';
+import { CreateUserDto } from '../users/user.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -293,6 +293,6 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    return { success: true };
+    return { success: true, message: 'Logout Successfully' };
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto } from '../dto/user.dto';
+import { CreateUserDto } from './user.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -12,21 +12,20 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    const publicId = this.makePublicId("USR");
+    const publicId = this.makePublicId('USR');
     return this.prisma.user.create({
-      data: {...createUserDto,publicId},
+      data: { ...createUserDto, publicId },
       select: {
         id: true,
         email: true,
         name: true,
         accountType: true,
-        
       },
     });
   }
 
   async findAll() {
-     const allUser = await this.prisma.user.findMany({
+    const allUser = await this.prisma.user.findMany({
       select: {
         id: true,
         email: true,
@@ -34,7 +33,7 @@ export class UsersService {
         accountType: true,
       },
     });
-    return allUser
+    return allUser;
   }
 
   async findOne(id: number) {
@@ -45,7 +44,6 @@ export class UsersService {
         email: true,
         name: true,
         accountType: true,
-        
       },
     });
 
