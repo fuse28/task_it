@@ -1,4 +1,4 @@
-import { useAllUsers } from "@/app/projects/hooks/project";
+import { useAllUsers, useCreateProject } from "@/app/projects/hooks/project";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +26,7 @@ export default function Modal({
   const [selectedTeam, setSelectedTeam] = useState([]);
 
   const { data: user = [], isLoading } = useAllUsers();
+  const { mutateAsync: createProject, isPending } = useCreateProject();
 
   const teamOptions = user.map((user: any) => ({
     value: user.id,
@@ -55,8 +56,18 @@ export default function Modal({
     mode: "onSubmit",
   });
 
-  const onSave = (values: FormValues) => {
-    console.log("submit", values);
+  const onSave = async (values: FormValues) => {
+    try {
+      await createProject({
+        name: values.projectName,
+        description: values.projectDescription,
+        teamMemberIds: values.projectTeam.map((item: any) => item.value),
+      });
+      console.log("Project created successfully!");
+      setVisible(false);
+    } catch (err) {
+      console.error("Failed to create project:", err);
+    }
   };
 
   return (

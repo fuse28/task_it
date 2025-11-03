@@ -20,12 +20,7 @@ API.interceptors.response.use(
     const originalRequest = error.config;
 
     // If token expired (401) and not retried yet
-    if (
-      (error.response?.status === 401 && !originalRequest._retry) ||
-      (localStorage.getItem("refreshToken") &&
-        localStorage.getItem("accessToken") === undefined) ||
-      null
-    ) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem("refreshToken");

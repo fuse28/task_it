@@ -187,7 +187,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(
       { sub, email },
-      { expiresIn: '10m' },
+      { expiresIn: '10d' },
     );
     const refreshToken = this.jwtService.sign(
       { sub, email, type: 'refresh' },
