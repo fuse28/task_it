@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createProject,
+  deleteProject,
   getAllUsers,
   getProjects,
 } from "../service/project.service";
@@ -15,13 +16,23 @@ export const useAllUsers = (enabled = true) => {
 };
 
 export const useCreateProject = () => {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: createProject,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects", "all"] });
+    },
   });
 };
-export const useAllProjects = () => {
+export const useAllProjects = (enabled = true) => {
   return useQuery({
     queryKey: ["projects", "all"],
     queryFn: getProjects,
+    enabled,
+  });
+};
+export const useDeleteProject = () => {
+  return useMutation({
+    mutationFn: deleteProject,
   });
 };

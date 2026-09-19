@@ -1,10 +1,11 @@
-import { useAllUsers, useCreateProject } from "@/app/projects/hooks/project";
+import {
+  useAllUsers,
+  useCreateProject,
+} from "@/app/projects/hooks/project";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -13,22 +14,29 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-export default function Modal({
+interface User {
+  id: string;
+  name?: string;
+  email: string;
+}
+
+interface TeamOption {
+  value: string;
+  label: string;
+}
+
+export default function CreateProjectModal({
   visible,
   setVisible,
 }: {
   visible: boolean;
   setVisible: (visible: boolean) => void;
 }) {
-  const [selectedTeam, setSelectedTeam] = useState([]);
-
-  const { data: user = [], isLoading } = useAllUsers();
+  const { data: users = [], isLoading: usersLoading } = useAllUsers(visible);
   const { mutateAsync: createProject, isPending } = useCreateProject();
-
-  const teamOptions = user.map((user: any) => ({
+  const teamOptions: TeamOption[] = users.map((user: User) => ({
     value: user.id,
     label: user.name || user.email,
   }));
@@ -36,15 +44,13 @@ export default function Modal({
   type FormValues = {
     projectName: string;
     projectDescription: string;
-    projectTeam: string[];
+    projectTeam: TeamOption[];
   };
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-    clearErrors,
+    formState: { errors },
     reset,
     control,
   } = useForm<FormValues>({
@@ -61,17 +67,17 @@ export default function Modal({
       await createProject({
         name: values.projectName,
         description: values.projectDescription,
-        teamMemberIds: values.projectTeam.map((item: any) => item.value),
+        teamMemberIds: values.projectTeam.map((item) => item.value),
       });
-      console.log("Project created successfully!");
       setVisible(false);
+      reset();
     } catch (err) {
       console.error("Failed to create project:", err);
     }
   };
 
   return (
-    <div className="card flex  justify-content-center">
+    <div>
       <Dialog open={visible} onOpenChange={setVisible}>
         <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={handleSubmit(onSave)}>
@@ -89,7 +95,7 @@ export default function Modal({
                   })}
                 />
                 {errors.projectName && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-destructive">
                     {errors.projectName.message}
                   </p>
                 )}
@@ -117,12 +123,12 @@ export default function Modal({
                       options={teamOptions}
                       value={value ?? []}
                       onValueChange={onChange}
-                      placeholder="Choose team"
+                      placeholder={usersLoading ? "Loading team members..." : "Choose team"}
                     />
                   )}
                 />
                 {errors.projectTeam && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-destructive">
                     {errors.projectTeam.message}
                   </p>
                 )}
@@ -132,7 +138,9 @@ export default function Modal({
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
-              <Button type="submit">Save</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Saving..." : "Save"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

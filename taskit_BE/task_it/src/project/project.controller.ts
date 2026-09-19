@@ -1,10 +1,18 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './project.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('project')
+@Controller('projects')
 @UseGuards(JwtAuthGuard)
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
@@ -14,8 +22,16 @@ export class ProjectController {
     return this.projectService.createProject(createProjectDto);
   }
 
-  @Get('getAllProjects')
+  @Get()
   async getAllProjects() {
     return this.projectService.getAllProjects();
+  }
+  @Delete(':id')
+  async deleteProject(@Param('id') id: number) {
+    return this.projectService.deleteProject(id);
+  }
+  @Get(':slug')
+  async getProjectBySlug(@Param('slug') slug: string) {
+    return this.projectService.findByName(slug);
   }
 }

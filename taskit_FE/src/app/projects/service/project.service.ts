@@ -2,14 +2,8 @@ import API from "@/lib/interceptor";
 
 //get All Registered users
 export const getAllUsers = async () => {
-  try {
-    const res = await API.get("/users/getAllUsers");
-    if (res) {
-      return res.data;
-    }
-  } catch (error) {
-    console.error("Failed to get all users", error);
-  }
+  const res = await API.get("/users/getAllUsers");
+  return res.data;
 };
 
 export const createProject = async (project: {
@@ -17,17 +11,16 @@ export const createProject = async (project: {
   description: string;
   teamMemberIds: string[];
 }) => {
-  const response = await API.post("/project/create", project);
+  const response = await API.post("/projects/create", project);
   return response.data;
 };
 
 export const getProjects = async () => {
-  try {
-    const res = await API.get("/project/getAllProjects");
-    if (res) {
-      return res.data;
-    }
-  } catch (error) {
-    console.error("Failed to get projects", error);
-  }
+  const res = await API.get("/projects");
+  return res.data;
+};
+
+export const deleteProject = async (projectId: number) => {
+  const response = await API.delete(`/projects/${projectId}`);
+  return response.data;
 };

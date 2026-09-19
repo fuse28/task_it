@@ -1,4 +1,9 @@
+import { isAxiosError } from "axios";
 import API from "@/lib/interceptor";
+
+function extractMessage(error: unknown): string | undefined {
+  return isAxiosError(error) ? error.response?.data?.message : undefined;
+}
 
 // Define the user registration data type
 export interface UserRegistrationData {
@@ -17,15 +22,15 @@ export const registerUser = async (userDetails: UserRegistrationData) => {
     }
 
     return res.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Registration error:", error);
 
-    // Handle axios errors
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.response?.status === 400) {
+    const message = extractMessage(error);
+    if (message) {
+      throw new Error(message);
+    } else if (isAxiosError(error) && error.response?.status === 400) {
       throw new Error("Invalid user data provided");
-    } else if (error.response?.status === 409) {
+    } else if (isAxiosError(error) && error.response?.status === 409) {
       throw new Error("User with this email already exists");
     } else {
       throw new Error("Registration failed. Please try again.");
@@ -50,12 +55,13 @@ export const loginUser = async (credentials: LoginCredentials) => {
     localStorage.setItem("refreshToken", res.data.refreshToken);
 
     return res.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Login error:", error);
 
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    } else if (error.response?.status === 401) {
+    const message = extractMessage(error);
+    if (message) {
+      throw new Error(message);
+    } else if (isAxiosError(error) && error.response?.status === 401) {
       throw new Error("Invalid email or password");
     } else {
       throw new Error("Login failed. Please try again.");
@@ -70,8 +76,12 @@ export const googleLogin = async (idToken: string) => {
     if (res.status !== 200) {
       throw new Error("Google Login Failed");
     }
+
+    localStorage.setItem("accessToken", res.data.accessToken);
+    localStorage.setItem("refreshToken", res.data.refreshToken);
+
     return res.data;
-  } catch (error: any) {
-    throw new Error(error.response.data.message);
+  } catch (error: unknown) {
+    throw new Error(extractMessage(error) ?? "Google login failed");
   }
 };

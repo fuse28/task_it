@@ -63,4 +63,25 @@ export class ProjectService {
       },
     });
   }
+  async deleteProject(id: number) {
+    return this.prisma.project.delete({
+      where: { id },
+    });
+  }
+
+  async findByName(projectName: string) {
+    const decodedName = projectName.replace(/-/g, ' ');
+    const project = await this.prisma.project.findUnique({
+      where: { name: decodedName },
+      include: {
+        team: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project "${decodedName}" not found`);
+    }
+    return project;
+  }
 }

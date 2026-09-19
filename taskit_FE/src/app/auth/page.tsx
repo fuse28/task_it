@@ -4,6 +4,11 @@ import { useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckSquareIcon } from "lucide-react";
 import {
   registerUser,
   loginUser,
@@ -46,7 +51,7 @@ export default function Auth() {
   const registerMutation = useMutation({
     mutationFn: (userData: UserRegistrationData) => registerUser(userData),
     onSuccess: () => {
-      alert("Registration successful. Please log in.");
+      toast.success("Registration successful. Please log in.");
       setMode("login");
       reset({ name: "", email: "", password: "", accountType: undefined });
     },
@@ -58,7 +63,7 @@ export default function Auth() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginCredentials) => loginUser(credentials),
-    onSuccess: (data) => {
+    onSuccess: () => {
       // Redirect to dashboard after successful login
       router.push("/dashboard");
     },
@@ -69,10 +74,11 @@ export default function Auth() {
 
   const googleMutation = useMutation({
     mutationFn: (idToken: string) => googleLogin(idToken),
-    onSuccess: (data) => {
-      console.log("Google Login Success:", data);
-      localStorage.setItem("token", data.token);
+    onSuccess: () => {
       router.push("/dashboard");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 
@@ -80,13 +86,27 @@ export default function Auth() {
   useEffect(() => {
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     const renderGoogleButton = () => {
-      const googleApi = (window as any).google?.accounts?.id;
+      const googleWindow = window as unknown as {
+        google?: {
+          accounts: {
+            id: {
+              initialize: (config: {
+                client_id: string;
+                callback: (response: { credential?: string }) => void;
+                ux_mode: string;
+              }) => void;
+              renderButton: (target: HTMLElement, options: Record<string, unknown>) => void;
+            };
+          };
+        };
+      };
+      const googleApi = googleWindow.google?.accounts?.id;
       if (!googleApi || !googleClientId) return false;
 
       googleApi.initialize({
         client_id: googleClientId,
-        callback: (response: any) => {
-          const idToken = response?.credential as string | undefined;
+        callback: (response) => {
+          const idToken = response?.credential;
           if (idToken) {
             googleMutation.mutate(idToken);
           }
@@ -96,7 +116,7 @@ export default function Auth() {
 
       const target = document.getElementById("googleSignInDiv");
       if (target) {
-        (window as any).google.accounts.id.renderButton(target, {
+        googleApi.renderButton(target, {
           theme: "outline",
           size: "large",
           width: 320,
@@ -159,129 +179,127 @@ export default function Auth() {
     clearErrors();
   }
 
+  const isBusy = isSubmitting || registerMutation.isPending || loginMutation.isPending;
+
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-full max-w-sm border-2 border-solid border-gray-300 rounded-lg p-6 shadow-sm bg-white"
+        className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm"
       >
-        <h1 className="text-xl font-semibold mb-4 text-center">
-          {mode === "signup" ? "Sign up" : "Login"}
-        </h1>
+        <div className="mb-6 flex flex-col items-center gap-2 text-center">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-primary">
+            <CheckSquareIcon className="size-5 text-primary-foreground" />
+          </div>
+          <h1 className="text-xl font-semibold text-foreground">
+            {mode === "signup" ? "Create your account" : "Welcome back"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {mode === "signup"
+              ? "Sign up to start organizing your projects"
+              : "Log in to continue to TaskIt"}
+          </p>
+        </div>
 
         {"root" in errors && errors.root?.message && (
-          <div className="mb-3 text-sm text-red-600" role="alert">
+          <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
             {errors.root.message}
           </div>
         )}
 
         {mode === "signup" && (
-          <div className="mb-4">
-            <label
-              className="block text-sm font-medium mb-1"
-              htmlFor="accountType"
-            >
-              Account Type
-            </label>
-            <select
-              id="accountType"
-              {...register("accountType", {
-                required:
-                  mode === "signup" ? "Please select an account type" : false,
-              })}
-              className="w-full border border-gray-300 mb-4 rounded px-3 py-2 outline-none focus:border-blue-500"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select account type
-              </option>
-              <option value="personal">Personal</option>
-              <option value="organization">Organization</option>
-            </select>
-            {errors.accountType && (
-              <p className="text-sm text-red-600 mt-2">
-                {errors.accountType.message}
-              </p>
-            )}
-            <label className="block text-sm font-medium mb-1" htmlFor="email">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              {...register("name", {
-                required: "Name is required",
-              })}
-              className="w-full border border-gray-300 rounded px-3 py-2 mb-1 outline-none focus:border-blue-500"
-              placeholder="name"
-            />
+          <div className="mb-4 space-y-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="accountType">Account Type</Label>
+              <select
+                id="accountType"
+                {...register("accountType", {
+                  required:
+                    mode === "signup" ? "Please select an account type" : false,
+                })}
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select account type
+                </option>
+                <option value="personal">Personal</option>
+                <option value="organization">Organization</option>
+              </select>
+              {errors.accountType && (
+                <p className="text-sm text-destructive">{errors.accountType.message}</p>
+              )}
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                type="text"
+                {...register("name", { required: "Name is required" })}
+                placeholder="Your name"
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
           </div>
         )}
 
-        <label className="block text-sm font-medium mb-1" htmlFor="email">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          {...register("email", {
-            required: "Email is required",
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: "Enter a valid email",
-            },
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2 mb-1 outline-none focus:border-blue-500"
-          placeholder="you@example.com"
-          autoComplete="email"
-        />
-        {errors.email && (
-          <p className="text-sm text-red-600 mb-2">{errors.email.message}</p>
-        )}
+        <div className="mb-4 grid gap-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: "Enter a valid email",
+              },
+            })}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email.message}</p>
+          )}
+        </div>
 
-        <label className="block text-sm font-medium mb-1" htmlFor="password">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          {...register("password", {
-            required: "Password is required",
-            minLength: {
-              value: 6,
-              message: "Password must be at least 6 characters",
-            },
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2 mb-1 outline-none focus:border-blue-500"
-          placeholder={mode === "signup" ? "Create a password" : "••••••••"}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-        />
-        {errors.password && (
-          <p className="text-sm text-red-600 mb-2">{errors.password.message}</p>
-        )}
+        <div className="mb-2 grid gap-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            {...register("password", {
+              required: "Password is required",
+              minLength: {
+                value: 6,
+                message: "Password must be at least 6 characters",
+              },
+            })}
+            placeholder={mode === "signup" ? "Create a password" : "••••••••"}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive">{errors.password.message}</p>
+          )}
+        </div>
 
-        <button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            registerMutation.isPending ||
-            loginMutation.isPending
-          }
-          className="w-full bg-blue-600 text-white mt-5 rounded py-2 disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-700 transition"
-        >
-          {isSubmitting || registerMutation.isPending || loginMutation.isPending
+        <Button type="submit" disabled={isBusy} className="mt-4 w-full">
+          {isBusy
             ? mode === "signup"
               ? "Signing up…"
               : "Signing in…"
             : mode === "signup"
             ? "Sign up"
             : "Login"}
-        </button>
+        </Button>
 
-        <div className="mt-4 flex items-center">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="px-3 text-xs text-gray-500">or</span>
-          <div className="flex-1 h-px bg-gray-200" />
+        <div className="mt-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <div className="h-px flex-1 bg-border" />
         </div>
 
         <div className="mt-4 flex justify-center">
@@ -289,23 +307,23 @@ export default function Auth() {
         </div>
 
         {mode === "login" ? (
-          <p className="text-sm text-gray-600 mt-4 text-center">
-            Don't have an account?{" "}
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
             <button
               type="button"
               onClick={switchToSignup}
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
             >
               Sign up
             </button>
           </p>
         ) : (
-          <p className="text-sm text-gray-600 mt-4 text-center">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <button
               type="button"
               onClick={switchToLogin}
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
             >
               Log in
             </button>
