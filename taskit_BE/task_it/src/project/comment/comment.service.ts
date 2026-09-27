@@ -1,18 +1,23 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ProjectAccessService } from '../project-access.service';
 
 const userSelect = { id: true, name: true, email: true };
 
 @Injectable()
 export class CommentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private projectAccess: ProjectAccessService,
+  ) {}
 
-  create(
+  async create(
     taskId: number,
     authorId: number,
     content: string,
     mentionedUserIds: number[] = [],
   ) {
+    await this.projectAccess.assertTaskMember(authorId, taskId);
     return this.prisma.comment.create({
       data: {
         taskId,

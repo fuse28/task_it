@@ -37,13 +37,14 @@ model Session {
 }
 
 model Project {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String?
-  team        User[]    @relation("ProjectTeam")
-  section     Section[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  description  String?
+  team         User[]        @relation("ProjectTeam")
+  section      Section[]
+  flowDiagrams FlowDiagram[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Section {
@@ -89,6 +90,16 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id])
   content   String
   mentions  User[]   @relation("CommentMentions")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FlowDiagram {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  data      Json     @default("{\"nodes\":[],\"edges\":[]}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

@@ -15,6 +15,11 @@ export async function createStage(sectionId: number, title: string) {
   return res.data;
 }
 
+export async function updateStage(stageId: number, title: string) {
+  const res = await API.put(`/stages/${stageId}`, { title });
+  return res.data;
+}
+
 export async function createTask(stageId: number, title: string) {
   const res = await API.post(`/tasks/stage/${stageId}`, { title });
   return res.data;

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 import TaskCard from "./TaskCard";
+import { InlineEditableText } from "@/components/InlineEditableText";
 import type { TaskSummary } from "../types";
 
 interface Stage {
@@ -15,9 +16,10 @@ interface Props {
   stage: Stage;
   onAddTask: (stageId: number, title: string) => void;
   onTaskClick: (taskId: number) => void;
+  onRenameStage: (stageId: number, title: string) => void;
 }
 
-export default function StageColumn({ stage, onAddTask, onTaskClick }: Props) {
+export default function StageColumn({ stage, onAddTask, onTaskClick, onRenameStage }: Props) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
 
@@ -31,9 +33,14 @@ export default function StageColumn({ stage, onAddTask, onTaskClick }: Props) {
 
   return (
     <div className="flex w-64 shrink-0 flex-col gap-2 rounded-xl bg-muted p-3">
-      <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{stage.title}</h3>
-        <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <InlineEditableText
+          value={stage.title}
+          onSave={(next) => onRenameStage(stage.id, next)}
+          allowEmpty={false}
+          className="text-sm font-semibold text-foreground"
+        />
+        <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
           {stage.tasks.length}
         </span>
       </div>

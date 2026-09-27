@@ -109,29 +109,22 @@ export default function CreateProjectModal({
                 />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="username-1">Team</Label>
+                <Label htmlFor="username-1">Team (optional)</Label>
                 <Controller
                   control={control}
                   name="projectTeam"
-                  rules={{
-                    validate: (v) =>
-                      (Array.isArray(v) && v.length > 0) ||
-                      "Select at least one team member",
-                  }}
                   render={({ field: { value, onChange } }) => (
                     <MultiSelect
                       options={teamOptions}
                       value={value ?? []}
                       onValueChange={onChange}
-                      placeholder={usersLoading ? "Loading team members..." : "Choose team"}
+                      placeholder={usersLoading ? "Loading team members..." : "Add teammates"}
                     />
                   )}
                 />
-                {errors.projectTeam && (
-                  <p className="text-sm text-destructive">
-                    {errors.projectTeam.message}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  You&apos;re added automatically. Only people on the team can see this project.
+                </p>
               </div>
             </div>
             <DialogFooter className="mt-5">

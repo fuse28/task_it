@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ProjectAccessService } from '../project-access.service';
 
 @Injectable()
 export class StageService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private projectAccess: ProjectAccessService,
+  ) {}
 
-  findAll(sectionId: number) {
+  async findAll(sectionId: number, userId: number) {
+    await this.projectAccess.assertSectionMember(userId, sectionId);
     return this.prisma.stage.findMany({
       where: { sectionId },
       orderBy: { position: 'asc' },
@@ -18,7 +23,8 @@ export class StageService {
     });
   }
 
-  async create(sectionId: number, title: string) {
+  async create(sectionId: number, title: string, userId: number) {
+    await this.projectAccess.assertSectionMember(userId, sectionId);
     const count = await this.prisma.stage.count({ where: { sectionId } });
 
     return this.prisma.stage.create({
@@ -30,14 +36,16 @@ export class StageService {
     });
   }
 
-  update(id: number, data: any) {
+  async update(id: number, data: any, userId: number) {
+    await this.projectAccess.assertStageMember(userId, id);
     return this.prisma.stage.update({
       where: { id },
       data,
     });
   }
 
-  delete(id: number) {
+  async delete(id: number, userId: number) {
+    await this.projectAccess.assertStageMember(userId, id);
     return this.prisma.stage.delete({
       where: { id },
     });

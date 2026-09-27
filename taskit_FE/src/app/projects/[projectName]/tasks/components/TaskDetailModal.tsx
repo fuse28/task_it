@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { PencilIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import type { MultiValue } from "react-select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InlineEditableText } from "@/components/InlineEditableText";
 import { useTask } from "../../hooks/useTask";
 import {
   useUpdateTask,
@@ -38,20 +35,6 @@ export function TaskDetailModal({ taskId, projectId, team, onOpenChange }: TaskD
   const updateComment = useUpdateComment(taskId ?? 0);
   const deleteComment = useDeleteComment(taskId ?? 0);
 
-  const [description, setDescription] = useState("");
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState("");
-  const titleInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setDescription(task?.description ?? "");
-  }, [task?.id, task?.description]);
-
-  useEffect(() => {
-    setTitleValue(task?.title ?? "");
-    setEditingTitle(false);
-  }, [task?.id, task?.title]);
-
   const teamOptions: MultiSelectOption[] = team.map((member) => ({
     value: String(member.id),
     label: member.name || member.email,
@@ -61,10 +44,16 @@ export function TaskDetailModal({ taskId, projectId, team, onOpenChange }: TaskD
     label: member.name || member.email,
   }));
 
-  function saveDescription() {
-    if (!task || description === (task.description ?? "")) return;
+  function saveTitle(next: string) {
     updateTask.mutate(
-      { description },
+      { title: next },
+      { onError: () => toast.error("Failed to update title") }
+    );
+  }
+
+  function saveDescription(next: string) {
+    updateTask.mutate(
+      { description: next },
       { onError: () => toast.error("Failed to save description") }
     );
   }
@@ -74,30 +63,6 @@ export function TaskDetailModal({ taskId, projectId, team, onOpenChange }: TaskD
       { assigneeIds: next.map((option) => Number(option.value)) },
       { onError: () => toast.error("Failed to update assignees") }
     );
-  }
-
-  function startEditingTitle() {
-    setTitleValue(task?.title ?? "");
-    setEditingTitle(true);
-  }
-
-  function saveTitle() {
-    setEditingTitle(false);
-    const trimmed = titleValue.trim();
-    if (!task || !trimmed) {
-      setTitleValue(task?.title ?? "");
-      return;
-    }
-    if (trimmed === task.title) return;
-    updateTask.mutate(
-      { title: trimmed },
-      { onError: () => toast.error("Failed to update title") }
-    );
-  }
-
-  function cancelEditingTitle() {
-    setTitleValue(task?.title ?? "");
-    setEditingTitle(false);
   }
 
   return (
@@ -114,32 +79,12 @@ export function TaskDetailModal({ taskId, projectId, team, onOpenChange }: TaskD
           <>
             <DialogHeader>
               <DialogTitle className="sr-only">{task.title}</DialogTitle>
-              {editingTitle ? (
-                <Input
-                  ref={titleInputRef}
-                  autoFocus
-                  value={titleValue}
-                  onChange={(e) => setTitleValue(e.target.value)}
-                  onBlur={saveTitle}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      saveTitle();
-                    }
-                    if (e.key === "Escape") cancelEditingTitle();
-                  }}
-                  className="text-lg font-semibold"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={startEditingTitle}
-                  className="group flex items-center gap-2 text-left text-lg font-semibold text-foreground"
-                >
-                  {task.title}
-                  <PencilIcon className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </button>
-              )}
+              <InlineEditableText
+                value={task.title}
+                onSave={saveTitle}
+                allowEmpty={false}
+                className="text-lg font-semibold text-foreground"
+              />
             </DialogHeader>
 
             <div className="space-y-4">
@@ -155,12 +100,13 @@ export function TaskDetailModal({ taskId, projectId, team, onOpenChange }: TaskD
 
               <div className="grid gap-1.5">
                 <Label>Description</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={saveDescription}
-                  rows={4}
+                <InlineEditableText
+                  value={task.description ?? ""}
+                  onSave={saveDescription}
                   placeholder="Add a description..."
+                  as="textarea"
+                  rows={2}
+                  className="text-sm"
                 />
               </div>
 

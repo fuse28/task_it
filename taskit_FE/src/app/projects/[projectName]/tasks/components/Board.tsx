@@ -11,6 +11,7 @@ import { LayoutGridIcon } from "lucide-react";
 import { useCreateSection } from "../../hooks/useCreateSection";
 import { useSections } from "../../hooks/useSection";
 import { useCreateStage } from "../../hooks/useCreateStage";
+import { useUpdateStage } from "../../hooks/useUpdateStage";
 import { useCreateTask } from "../../hooks/useCreateTask";
 import type { TeamMember, TaskSummary } from "../types";
 
@@ -30,6 +31,7 @@ export default function Board({ projectId, team }: { projectId: number; team: Te
   const { data: sections = [], isLoading } = useSections(projectId);
   const createSection = useCreateSection(projectId);
   const createStage = useCreateStage(projectId);
+  const updateStage = useUpdateStage(projectId);
   const createTask = useCreateTask(projectId);
 
   const [activeSectionId, setActiveSectionId] = useState<number | null>(null);
@@ -62,6 +64,13 @@ export default function Board({ projectId, team }: { projectId: number; team: Te
     createTask.mutate(
       { stageId, title },
       { onError: () => toast.error("Failed to create task") }
+    );
+  }
+
+  function handleRenameStage(stageId: number, title: string) {
+    updateStage.mutate(
+      { stageId, title },
+      { onError: () => toast.error("Failed to rename stage") }
     );
   }
 
@@ -100,6 +109,7 @@ export default function Board({ projectId, team }: { projectId: number; team: Te
               stage={stage}
               onAddTask={handleAddTask}
               onTaskClick={setSelectedTaskId}
+              onRenameStage={handleRenameStage}
             />
           ))}
 

@@ -9,6 +9,7 @@ import { SectionModule } from './project/section/sections.module';
 import { StageModule } from './project/stage/stage.module';
 import { TaskModule } from './project/task/task.module';
 import { CommentModule } from './project/comment/comment.module';
+import { FlowDiagramModule } from './project/flow-diagram/flow-diagram.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CommentModule } from './project/comment/comment.module';
     StageModule,
     TaskModule,
     CommentModule,
+    FlowDiagramModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

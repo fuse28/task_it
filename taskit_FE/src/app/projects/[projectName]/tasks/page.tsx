@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
-import { PageHeader } from "@/components/PageHeader";
+import { ProjectHeader } from "./components/ProjectHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -20,10 +20,22 @@ export default function TaskPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <PageHeader
-          title={project?.name ?? decodeURIComponent(projectName ?? "")}
-          description={project?.description || "Task board"}
-        />
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        ) : project ? (
+          <ProjectHeader
+            projectId={project.id}
+            name={project.name}
+            description={project.description}
+          />
+        ) : (
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {decodeURIComponent(projectName ?? "")}
+          </h1>
+        )}
 
         {isLoading ? (
           <div className="flex gap-4">

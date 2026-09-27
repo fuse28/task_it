@@ -4,6 +4,7 @@ import {
   deleteProject,
   getAllUsers,
   getProjects,
+  updateProject,
 } from "../service/project.service";
 
 export const useAllUsers = (enabled = true) => {
@@ -34,5 +35,22 @@ export const useAllProjects = (enabled = true) => {
 export const useDeleteProject = () => {
   return useMutation({
     mutationFn: deleteProject,
+  });
+};
+
+export const useUpdateProject = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      data,
+    }: {
+      projectId: number;
+      data: { name?: string; description?: string };
+    }) => updateProject(projectId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects", "all"] });
+      qc.invalidateQueries({ queryKey: ["project"] });
+    },
   });
 };

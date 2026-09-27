@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ProjectAccessService } from '../project-access.service';
 
 @Injectable()
 export class SectionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private projectAccess: ProjectAccessService,
+  ) {}
 
-  findAll(projectId: number) {
+  async findAll(projectId: number, userId: number) {
+    await this.projectAccess.assertProjectMember(userId, projectId);
     return this.prisma.section.findMany({
       where: { projectId },
       orderBy: { position: 'asc' },
@@ -23,7 +28,8 @@ export class SectionService {
     });
   }
 
-  async create(projectId: number, title: string) {
+  async create(projectId: number, title: string, userId: number) {
+    await this.projectAccess.assertProjectMember(userId, projectId);
     const count = await this.prisma.section.count({
       where: { projectId },
     });
@@ -37,14 +43,16 @@ export class SectionService {
     });
   }
 
-  update(id: number, data: any) {
+  async update(id: number, data: any, userId: number) {
+    await this.projectAccess.assertSectionMember(userId, id);
     return this.prisma.section.update({
       where: { id },
       data,
     });
   }
 
-  delete(id: number) {
+  async delete(id: number, userId: number) {
+    await this.projectAccess.assertSectionMember(userId, id);
     return this.prisma.section.delete({
       where: { id },
     });
